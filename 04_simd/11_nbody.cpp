@@ -22,13 +22,17 @@ int main() {
     y[i] = drand48();
     m[i] = drand48();
     fx[i] = fy[i] = 0;
-    mask[i] = 0;
+    mask[i] = 2;
   }
 
   for(int i=0; i<N; i++) {
-    //create mask for  condition
-    mask[i] = 1;
+    //create mask for condition
+    mask[i] = 0;
     __m512 maskvec = _mm512_load_ps(mask);
+    __m512 one = _mm512_set1_ps(1);
+    __mmask16 finalmask = _mm512_cmp_ps_mask(maskvec, one, _MM_CMPINT_GT);
+    __m512 zero = _mm512_set1_ps(0);
+    //printvec(maskvec);
     //x[N] vector
     __m512 xvec = _mm512_load_ps(x);
     //y[N] vector
@@ -47,15 +51,18 @@ int main() {
     __m512 rxvecquad = _mm512_mul_ps(rxvec, rxvec);
     __m512 ryvecquad = _mm512_mul_ps(ryvec, ryvec);
     __m512 rvec2 = _mm512_add_ps(rxvecquad,ryvecquad);
-    //add mask to r2 so that we wont devide by zero(wont change the result since the dominator will always be 0 for i = j)
-    rvec2 = _mm512_add_ps(rvec2,maskvec); 
     __m512 rinvvec = _mm512_rsqrt14_ps(rvec2);
+    
+    //set the value where division whith 0 occured to 0
+    rinvvec = _mm512_mask_blend_ps(finalmask, zero, rinvvec);
+    printvec(rinvvec);
     //1/r^3
     __m512 rinv2vec = _mm512_mul_ps(rinvvec, rinvvec);
     __m512 rinv3vec = _mm512_mul_ps(rinv2vec, rinvvec);
     //rx*mj*1/r3
     __m512 rxmvec = _mm512_mul_ps(rxvec, mvec);
     __m512 fxreduce = _mm512_mul_ps(rxmvec, rinv3vec);
+   
     //ry*mj*1/r3
     __m512 rymvec= _mm512_mul_ps(ryvec, mvec);
     __m512 fyreduce = _mm512_mul_ps(rymvec, rinv3vec);
@@ -63,6 +70,6 @@ int main() {
     fx[i] -= _mm512_reduce_add_ps(fxreduce);
     fy[i] -= _mm512_reduce_add_ps(fyreduce);
     printf("%d %g %g\n",i,fx[i],fy[i]);
-    mask[i] = 0;
+    mask[i] = 2;
   }
 }
