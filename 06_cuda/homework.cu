@@ -64,5 +64,8 @@ int main() {
     printf("%d ",key[i]);
   }
   printf("\n");
+  cudaFree(key);
+  cudaFree(bucket);
+  cudaFree(offset);
 }
 
